@@ -1,0 +1,25 @@
+# Use base image
+FROM golang:1.21 as builder
+
+WORKDIR /app
+
+# Copy go mod files and download dependencies
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build Consumer binary
+RUN CGO_ENABLED=0 GOOS=linux go build -o consumer ./cmd/consumer/main.go
+
+# Create final minimal image
+FROM alpine:latest
+
+WORKDIR /root/
+
+# Copy binary from builder stage
+COPY --from=builder /app/consumer .
+
+# Run Consumer
+CMD ["./consumer"]
