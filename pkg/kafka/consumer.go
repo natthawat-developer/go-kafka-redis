@@ -1,8 +1,7 @@
 package kafka
 
 import (
-	"log"
-
+	"go-kafka-redis/pkg/logger"
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 )
 
@@ -17,6 +16,8 @@ func NewConsumer(bootstrapServers, groupID, autoOffsetReset string) (*Consumer, 
 		"auto.offset.reset": autoOffsetReset,
 	})
 	if err != nil {
+		// ใช้ logger ในการบันทึกข้อผิดพลาดแทนการใช้ log.Fatal
+		logger.ErrorLogger.Printf("Failed to create consumer: %s", err)
 		return nil, err
 	}
 
@@ -26,14 +27,27 @@ func NewConsumer(bootstrapServers, groupID, autoOffsetReset string) (*Consumer, 
 func (c *Consumer) SubscribeTopic(topic string) {
 	err := c.client.SubscribeTopics([]string{topic}, nil)
 	if err != nil {
-		log.Fatalf("Failed to subscribe to topic: %s", err)
+		// ใช้ logger ในการบันทึกข้อผิดพลาดแทนการใช้ log.Fatalf
+		logger.ErrorLogger.Printf("Failed to subscribe to topic: %s", err)
 	}
 }
 
 func (c *Consumer) ReadMessage() (*kafka.Message, error) {
-	return c.client.ReadMessage(-1)
+	msg, err := c.client.ReadMessage(-1)
+	if err != nil {
+		// ใช้ logger ในการบันทึกข้อผิดพลาดหากมีปัญหาการอ่านข้อความ
+		logger.ErrorLogger.Printf("Failed to read message: %s", err)
+		return nil, err
+	}
+
+	// ใช้ logger ในการบันทึกข้อความที่อ่านได้ (ถ้าต้องการ)
+	logger.InfoLogger.Printf("Received message: %s", string(msg.Value))
+
+	return msg, nil
 }
 
 func (c *Consumer) Close() {
 	c.client.Close()
+	// ใช้ logger ในการบันทึกเมื่อปิด consumer
+	logger.InfoLogger.Println("Consumer closed")
 }

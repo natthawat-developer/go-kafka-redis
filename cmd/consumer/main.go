@@ -1,16 +1,23 @@
 package main
 
 import (
-	"fmt"
-	"log"
 	"go-kafka-redis/config"
 	"go-kafka-redis/pkg/kafka"
+	"go-kafka-redis/pkg/logger"
 	"go-kafka-redis/pkg/redis"
 )
 
 func main() {
+	// เริ่มต้น logger
+	logger.InitLogger()
+
 	// โหลดค่า config
-	config.LoadConfig("config/config.yaml")
+	err := config.LoadConfig("config/config.yaml")
+	if err != nil {
+		// หากโหลด config ไม่สำเร็จ
+		logger.ErrorLogger.Printf("Failed to load config: %s", err)
+		return
+	}
 
 	// เชื่อมต่อ Redis
 	redis.InitRedis(config.AppConfig.Redis.Addr)
@@ -23,7 +30,9 @@ func main() {
 		config.AppConfig.Kafka.AutoOffsetReset,
 	)
 	if err != nil {
-		log.Fatalf("Failed to create Kafka consumer: %s", err)
+		// หากสร้าง Kafka consumer ไม่สำเร็จ
+		logger.ErrorLogger.Printf("Failed to create Kafka consumer: %s", err)
+		return
 	}
 	defer consumer.Close()
 
@@ -32,14 +41,16 @@ func main() {
 	consumer.SubscribeTopic(topic)
 
 	// รับข้อความจาก Kafka และบันทึกลง Redis
-	fmt.Println("Waiting for messages...")
+	logger.InfoLogger.Println("Waiting for messages...")
 	for {
 		msg, err := consumer.ReadMessage()
 		if err == nil {
-			fmt.Printf("Received: %s\n", string(msg.Value))
+			// เมื่อรับข้อความจาก Kafka
+			logger.InfoLogger.Printf("Received: %s", string(msg.Value))
 			redis.SaveToRedis(string(msg.Key), string(msg.Value))
 		} else {
-			log.Printf("Consumer error: %v (%v)\n", err, msg)
+			// เมื่อเกิดข้อผิดพลาดจาก Kafka
+			logger.ErrorLogger.Printf("Consumer error: %v (%v)\n", err, msg)
 		}
 	}
 }

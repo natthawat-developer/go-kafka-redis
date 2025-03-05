@@ -2,9 +2,7 @@ package redis
 
 import (
 	"context"
-	"fmt"
-	"log"
-
+	"go-kafka-redis/pkg/logger" 
 	"github.com/redis/go-redis/v9"
 )
 
@@ -20,9 +18,9 @@ func SaveToRedis(key string, value string) {
 	ctx := context.Background()
 	err := redisClient.Set(ctx, key, value, 0).Err()
 	if err != nil {
-		log.Printf("Failed to save to Redis: %s", err)
+		logger.ErrorLogger.Printf("Failed to save to Redis: %s", err)
 	} else {
-		fmt.Printf("Saved to Redis: %s -> %s\n", key, value)
+		logger.InfoLogger.Printf("Saved to Redis: %s -> %s", key, value)
 	}
 }
 
